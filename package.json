@@ -19,10 +19,13 @@
   "license": "ISC",
   "dependencies": {
     "@fastify/autoload": "^6.0.0",
+    "@fastify/env": "^5.0.3",
+    "@fastify/postgres": "^6.0.2",
     "@fastify/sensible": "^6.0.0",
     "fastify": "^5.0.0",
     "fastify-cli": "^7.4.1",
-    "fastify-plugin": "^5.0.0"
+    "fastify-plugin": "^5.0.0",
+    "pg": "^8.16.3"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
