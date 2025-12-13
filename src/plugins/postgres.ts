@@ -4,7 +4,7 @@ import fastifyPostgres from '@fastify/postgres'
 
 const postgresPlugin: FastifyPluginAsync = async (fastify) => {
   await fastify.register(fastifyPostgres, {
-    connectionString: fastify.config.DATABASE_URL
+    connectionString: fastify.config.DATABASE_URL,
   })
 
   fastify.log.info('PostgreSQL connection established')
