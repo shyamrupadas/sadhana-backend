@@ -31,14 +31,21 @@ const schema = {
       type: 'string',
       default: 'my-secret',
     },
+    CORS_ORIGIN: {
+      type: 'string',
+      default: 'http://localhost:5173',
+    },
   },
 }
 
 const envPlugin: FastifyPluginAsync = async (fastify) => {
   await fastify.register(fastifyEnv, {
     schema,
-    dotenv: true,
+    dotenv: process.env.NODE_ENV !== 'production',
+    data: process.env,
   })
 }
 
-export default fastifyPlugin(envPlugin)
+export default fastifyPlugin(envPlugin, {
+  name: 'env',
+})

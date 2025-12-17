@@ -25,6 +25,7 @@ declare module 'fastify' {
       JWT_EXPIRES_IN: string
       JWT_REFRESH_EXPIRES_IN: string
       COOKIE_SECRET: string
+      CORS_ORIGIN: string
     }
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>
     refreshSign: (payload: JwtRefreshPayload) => Promise<string>

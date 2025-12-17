@@ -103,4 +103,3 @@ Refresh токен автоматически сохраняется в httpOnly
 - `400 BAD_REQUEST` - Неверный запрос (например, email уже существует)
 - `401 UNAUTHORIZED` - Неверные credentials или токен
 - `500 INTERNAL_ERROR` - Внутренняя ошибка сервера
-

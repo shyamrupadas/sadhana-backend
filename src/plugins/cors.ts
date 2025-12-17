@@ -3,8 +3,7 @@ import cors, { FastifyCorsOptions } from '@fastify/cors'
 
 export default fp<FastifyCorsOptions>(async (fastify) => {
   fastify.register(cors, {
-    origin: 'http://localhost:5173',
+    origin: true,
     credentials: true
   })
 })
-

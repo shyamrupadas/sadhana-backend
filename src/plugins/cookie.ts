@@ -10,4 +10,3 @@ const cookiePlugin: FastifyPluginAsync = async (fastify) => {
 }
 
 export default fastifyPlugin(cookiePlugin)
-
