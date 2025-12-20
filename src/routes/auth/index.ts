@@ -3,6 +3,22 @@ import { AuthService } from '../../services/auth.service'
 import { ApiShemas } from '../../schema'
 import { AppError } from '../../utils/errors'
 
+const buildRefreshCookieOptions = (request: { headers: Record<string, unknown> }) => {
+  // NOTE: Behind a proxy (Railway), HTTPS is usually indicated via x-forwarded-proto.
+  const xfProto = String(request.headers['x-forwarded-proto'] ?? '')
+  const isHttps = xfProto === 'https'
+  const sameSite: 'none' | 'lax' = isHttps ? 'none' : 'lax'
+  const secure = isHttps
+
+  return {
+    httpOnly: true,
+    secure,
+    sameSite,
+    path: '/',
+    maxAge: 7 * 24 * 60 * 60,
+  } as const
+}
+
 const authRoutes: FastifyPluginAsync = async (fastify): Promise<void> => {
   const authService = new AuthService(fastify)
 
@@ -55,13 +71,7 @@ const authRoutes: FastifyPluginAsync = async (fastify): Promise<void> => {
       const result = await authService.register(email, password)
       const refreshToken = await authService.generateRefreshTokenForUser(result.user.id)
 
-      reply.setCookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        path: '/',
-        maxAge: 7 * 24 * 60 * 60,
-      })
+      reply.setCookie('refreshToken', refreshToken, buildRefreshCookieOptions(request))
 
       return reply.code(201).send(result)
     }
@@ -104,13 +114,7 @@ const authRoutes: FastifyPluginAsync = async (fastify): Promise<void> => {
       const result = await authService.login(email, password)
       const refreshToken = await authService.generateRefreshTokenForUser(result.user.id)
 
-      reply.setCookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        path: '/',
-        maxAge: 7 * 24 * 60 * 60,
-      })
+      reply.setCookie('refreshToken', refreshToken, buildRefreshCookieOptions(request))
 
       return reply.send(result)
     }
@@ -155,13 +159,7 @@ const authRoutes: FastifyPluginAsync = async (fastify): Promise<void> => {
         result.user.id
       )
 
-      reply.setCookie('refreshToken', newRefreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        path: '/',
-        maxAge: 7 * 24 * 60 * 60,
-      })
+      reply.setCookie('refreshToken', newRefreshToken, buildRefreshCookieOptions(request))
 
       return reply.send(result)
     }

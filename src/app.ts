@@ -5,7 +5,9 @@ import { FastifyPluginAsync, FastifyServerOptions } from 'fastify'
 export interface AppOptions
   extends FastifyServerOptions, Partial<AutoloadPluginOptions> {}
 // Pass --options via CLI arguments in command to enable these options.
-const options: AppOptions = {}
+const options: AppOptions = {
+  trustProxy: true, // Railway/NGINX/Cloudflare: нужен для корректного protocol/ip и x-forwarded-*
+}
 
 const app: FastifyPluginAsync<AppOptions> = async (fastify, opts): Promise<void> => {
   // Place here your custom code!
