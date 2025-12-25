@@ -1,5 +1,5 @@
 import { config } from 'dotenv'
-import { readFileSync } from 'fs'
+import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { Pool } from 'pg'
 
@@ -8,24 +8,27 @@ config()
 const runMigrations = async () => {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+    ssl:
+      process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
   })
 
   try {
-    const migrationPath = join(
-      __dirname,
-      '..',
-      '..',
-      'src',
-      'db',
-      'migrations',
-      '001_create_users_table.sql'
-    )
-    const migrationSQL = readFileSync(migrationPath, 'utf-8')
+    const migrationsDir = join(__dirname, '..', '..', 'src', 'db', 'migrations')
 
-    console.log('Running migration: 001_create_users_table.sql')
-    await pool.query(migrationSQL)
-    console.log('Migration completed successfully')
+    const migrationFiles = readdirSync(migrationsDir)
+      .filter((file) => file.endsWith('.sql'))
+      .sort()
+
+    for (const file of migrationFiles) {
+      const migrationPath = join(migrationsDir, file)
+      const migrationSQL = readFileSync(migrationPath, 'utf-8')
+
+      console.log(`Running migration: ${file}`)
+      await pool.query(migrationSQL)
+      console.log(`Migration ${file} completed successfully`)
+    }
+
+    console.log('All migrations completed successfully')
   } catch (error) {
     console.error('Migration failed:', error)
     process.exit(1)

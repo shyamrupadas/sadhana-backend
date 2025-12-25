@@ -23,5 +23,7 @@ export default fp<FastifyCorsOptions>(async (fastify) => {
       cb(new Error(`CORS blocked for origin: ${origin}`), false)
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 })
