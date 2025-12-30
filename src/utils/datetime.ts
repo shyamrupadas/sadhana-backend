@@ -30,17 +30,25 @@ export function getYesterdayMoscow(): string {
   return dayjs().tz(MOSCOW_TZ).subtract(1, 'day').format('YYYY-MM-DD')
 }
 
+export function getPreviousDate(date: string): string {
+  return dayjs(date).subtract(1, 'day').format('YYYY-MM-DD')
+}
+
 export function calculateSleepDuration(
   bedtime: string | null,
   wakeTime: string | null,
   napDurationMin: number
 ): number {
   if (!bedtime || !wakeTime) {
-    return napDurationMin
+    return Math.max(0, Math.min(1440, napDurationMin))
   }
 
   const bed = dayjs(bedtime)
   const wake = dayjs(wakeTime)
+
+  if (!bed.isValid() || !wake.isValid()) {
+    return Math.max(0, Math.min(1440, napDurationMin))
+  }
 
   let diff = wake.diff(bed, 'minute')
 
@@ -48,5 +56,11 @@ export function calculateSleepDuration(
     diff = diff + 24 * 60
   }
 
-  return napDurationMin + diff
+  let totalDuration = napDurationMin + diff
+
+  if (totalDuration > 24 * 60) {
+    totalDuration = totalDuration - 24 * 60
+  }
+
+  return Math.max(0, Math.min(1440, totalDuration))
 }

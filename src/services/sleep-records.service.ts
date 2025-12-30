@@ -5,6 +5,7 @@ import {
   calculateSleepDuration,
   getYesterdayMoscow,
   getMoscowDate,
+  getPreviousDate,
 } from '../utils/datetime'
 import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone'
@@ -29,12 +30,45 @@ export class SleepRecordsService {
         [userId, fiveDaysAgo, today]
       )
 
-      return result.rows.map((row) => ({
-        id: row.date,
-        date: row.date,
-        sleep: row.sleep_data,
-        habits: row.habits,
-      }))
+      const entries: ApiShemas['DailyEntry'][] = []
+
+      for (const row of result.rows) {
+        const previousDate = getPreviousDate(row.date)
+        const previousResult = await client.query(
+          'SELECT sleep_data FROM daily_entries WHERE user_id = $1 AND date = $2',
+          [userId, previousDate]
+        )
+
+        const previousSleepData: ApiShemas['SleepData'] =
+          previousResult.rows.length > 0 && previousResult.rows[0].sleep_data
+            ? previousResult.rows[0].sleep_data
+            : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+
+        const currentSleepData: ApiShemas['SleepData'] = row.sleep_data || {
+          bedtime: null,
+          wakeTime: null,
+          napDurationMin: 0,
+          durationMin: 0,
+        }
+
+        const durationMin = calculateSleepDuration(
+          previousSleepData.bedtime ?? null,
+          currentSleepData.wakeTime ?? null,
+          currentSleepData.napDurationMin ?? 0
+        )
+
+        entries.push({
+          id: row.date,
+          date: row.date,
+          sleep: {
+            ...currentSleepData,
+            durationMin,
+          },
+          habits: row.habits,
+        })
+      }
+
+      return entries
     } finally {
       client.release()
     }
@@ -49,12 +83,45 @@ export class SleepRecordsService {
         [userId]
       )
 
-      return result.rows.map((row) => ({
-        id: row.date,
-        date: row.date,
-        sleep: row.sleep_data,
-        habits: row.habits,
-      }))
+      const entries: ApiShemas['DailyEntry'][] = []
+
+      for (const row of result.rows) {
+        const previousDate = getPreviousDate(row.date)
+        const previousResult = await client.query(
+          'SELECT sleep_data FROM daily_entries WHERE user_id = $1 AND date = $2',
+          [userId, previousDate]
+        )
+
+        const previousSleepData: ApiShemas['SleepData'] =
+          previousResult.rows.length > 0 && previousResult.rows[0].sleep_data
+            ? previousResult.rows[0].sleep_data
+            : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+
+        const currentSleepData: ApiShemas['SleepData'] = row.sleep_data || {
+          bedtime: null,
+          wakeTime: null,
+          napDurationMin: 0,
+          durationMin: 0,
+        }
+
+        const durationMin = calculateSleepDuration(
+          previousSleepData.bedtime ?? null,
+          currentSleepData.wakeTime ?? null,
+          currentSleepData.napDurationMin ?? 0
+        )
+
+        entries.push({
+          id: row.date,
+          date: row.date,
+          sleep: {
+            ...currentSleepData,
+            durationMin,
+          },
+          habits: row.habits,
+        })
+      }
+
+      return entries
     } finally {
       client.release()
     }
@@ -76,11 +143,38 @@ export class SleepRecordsService {
         return null
       }
 
+      const previousDate = getPreviousDate(date)
+      const previousResult = await client.query(
+        'SELECT sleep_data FROM daily_entries WHERE user_id = $1 AND date = $2',
+        [userId, previousDate]
+      )
+
+      const previousSleepData: ApiShemas['SleepData'] =
+        previousResult.rows.length > 0 && previousResult.rows[0].sleep_data
+          ? previousResult.rows[0].sleep_data
+          : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+
       const row = result.rows[0]
+      const currentSleepData: ApiShemas['SleepData'] = row.sleep_data || {
+        bedtime: null,
+        wakeTime: null,
+        napDurationMin: 0,
+        durationMin: 0,
+      }
+
+      const durationMin = calculateSleepDuration(
+        previousSleepData.bedtime ?? null,
+        currentSleepData.wakeTime ?? null,
+        currentSleepData.napDurationMin ?? 0
+      )
+
       return {
         id: row.date,
         date: row.date,
-        sleep: row.sleep_data,
+        sleep: {
+          ...currentSleepData,
+          durationMin,
+        },
         habits: row.habits,
       }
     } finally {
@@ -96,8 +190,63 @@ export class SleepRecordsService {
     const client = await this.fastify.pg.connect()
 
     try {
+      await client.query('BEGIN')
+
+      const nextDate = dayjs(date).add(1, 'day').format('YYYY-MM-DD')
+      const nextRecord = await client.query(
+        'SELECT sleep_data FROM daily_entries WHERE user_id = $1 AND date = $2',
+        [userId, nextDate]
+      )
+
+      if (
+        nextRecord.rows.length > 0 &&
+        sleepData.bedtime !== null &&
+        sleepData.bedtime !== undefined
+      ) {
+        const nextSleepData: ApiShemas['SleepData'] = nextRecord.rows[0].sleep_data || {
+          bedtime: null,
+          wakeTime: null,
+          napDurationMin: 0,
+          durationMin: 0,
+        }
+
+        const nextDurationMin = calculateSleepDuration(
+          sleepData.bedtime,
+          nextSleepData.wakeTime ?? null,
+          nextSleepData.napDurationMin ?? 0
+        )
+
+        const updatedNextSleepData: ApiShemas['SleepData'] = {
+          ...nextSleepData,
+          durationMin: nextDurationMin,
+        }
+
+        await client.query(
+          `UPDATE daily_entries
+           SET sleep_data = $1::jsonb, updated_at = NOW()
+           WHERE user_id = $2 AND date = $3`,
+          [JSON.stringify(updatedNextSleepData), userId, nextDate]
+        )
+      }
+
+      const existing = await client.query(
+        'SELECT sleep_data, habits FROM daily_entries WHERE user_id = $1 AND date = $2',
+        [userId, date]
+      )
+
+      const previousDate = getPreviousDate(date)
+      const previousRecord = await client.query(
+        'SELECT sleep_data FROM daily_entries WHERE user_id = $1 AND date = $2',
+        [userId, previousDate]
+      )
+
+      const previousSleepData: ApiShemas['SleepData'] =
+        previousRecord.rows.length > 0 && previousRecord.rows[0].sleep_data
+          ? previousRecord.rows[0].sleep_data
+          : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+
       const durationMin = calculateSleepDuration(
-        sleepData.bedtime ?? null,
+        previousSleepData.bedtime ?? null,
         sleepData.wakeTime ?? null,
         sleepData.napDurationMin ?? 0
       )
@@ -108,11 +257,6 @@ export class SleepRecordsService {
         napDurationMin: sleepData.napDurationMin ?? 0,
         durationMin,
       }
-
-      const existing = await client.query(
-        'SELECT habits FROM daily_entries WHERE user_id = $1 AND date = $2',
-        [userId, date]
-      )
 
       const habits =
         existing.rows.length > 0 && Array.isArray(existing.rows[0].habits)
@@ -129,13 +273,39 @@ export class SleepRecordsService {
         [entryId, userId, date, JSON.stringify(sleepDataComplete), JSON.stringify(habits)]
       )
 
+      await client.query('COMMIT')
+
       const row = result.rows[0]
+      const finalSleepData: ApiShemas['SleepData'] = row.sleep_data
+
+      const finalPreviousRecord = await client.query(
+        'SELECT sleep_data FROM daily_entries WHERE user_id = $1 AND date = $2',
+        [userId, previousDate]
+      )
+
+      const finalPreviousSleepData: ApiShemas['SleepData'] =
+        finalPreviousRecord.rows.length > 0 && finalPreviousRecord.rows[0].sleep_data
+          ? finalPreviousRecord.rows[0].sleep_data
+          : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+
+      const recalculatedDurationMin = calculateSleepDuration(
+        finalPreviousSleepData.bedtime ?? null,
+        finalSleepData.wakeTime ?? null,
+        finalSleepData.napDurationMin ?? 0
+      )
+
       return {
         id: row.date,
         date: row.date,
-        sleep: row.sleep_data,
+        sleep: {
+          ...finalSleepData,
+          durationMin: recalculatedDurationMin,
+        },
         habits: row.habits,
       }
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
     } finally {
       client.release()
     }
@@ -185,21 +355,64 @@ export class SleepRecordsService {
         habits.push({ key: habitKey, value })
       }
 
+      const previousDate = getPreviousDate(date)
+      const previousResult = await client.query(
+        'SELECT sleep_data FROM daily_entries WHERE user_id = $1 AND date = $2',
+        [userId, previousDate]
+      )
+
+      const previousSleepData: ApiShemas['SleepData'] =
+        previousResult.rows.length > 0 && previousResult.rows[0].sleep_data
+          ? previousResult.rows[0].sleep_data
+          : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+
+      const durationMin = calculateSleepDuration(
+        previousSleepData.bedtime ?? null,
+        sleepData.wakeTime ?? null,
+        sleepData.napDurationMin ?? 0
+      )
+
+      const updatedSleepData: ApiShemas['SleepData'] = {
+        ...sleepData,
+        durationMin,
+      }
+
       const entryId = `${userId}-${date}`
       const result = await client.query(
         `INSERT INTO daily_entries (id, user_id, date, sleep_data, habits)
          VALUES ($1, $2, $3, $4::jsonb, $5::jsonb)
          ON CONFLICT (user_id, date)
-         DO UPDATE SET habits = $5::jsonb, updated_at = NOW()
+         DO UPDATE SET habits = $5::jsonb, sleep_data = $4::jsonb, updated_at = NOW()
          RETURNING id, date, sleep_data, habits`,
-        [entryId, userId, date, JSON.stringify(sleepData), JSON.stringify(habits)]
+        [entryId, userId, date, JSON.stringify(updatedSleepData), JSON.stringify(habits)]
       )
 
       const row = result.rows[0]
+      const finalSleepData: ApiShemas['SleepData'] = row.sleep_data || updatedSleepData
+
+      const finalPreviousResult = await client.query(
+        'SELECT sleep_data FROM daily_entries WHERE user_id = $1 AND date = $2',
+        [userId, previousDate]
+      )
+
+      const finalPreviousSleepData: ApiShemas['SleepData'] =
+        finalPreviousResult.rows.length > 0 && finalPreviousResult.rows[0].sleep_data
+          ? finalPreviousResult.rows[0].sleep_data
+          : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+
+      const recalculatedDurationMin = calculateSleepDuration(
+        finalPreviousSleepData.bedtime ?? null,
+        finalSleepData.wakeTime ?? null,
+        finalSleepData.napDurationMin ?? 0
+      )
+
       return {
         id: row.date,
         date: row.date,
-        sleep: row.sleep_data,
+        sleep: {
+          ...finalSleepData,
+          durationMin: recalculatedDurationMin,
+        },
         habits: row.habits,
       }
     } finally {
@@ -228,19 +441,69 @@ export class SleepRecordsService {
         (h: ApiShemas['HabitCheck']) => h.key !== habitKey
       )
 
+      const sleepData: ApiShemas['SleepData'] = existing.rows[0].sleep_data || {
+        bedtime: null,
+        wakeTime: null,
+        napDurationMin: 0,
+        durationMin: 0,
+      }
+
+      const previousDate = getPreviousDate(date)
+      const previousResult = await client.query(
+        'SELECT sleep_data FROM daily_entries WHERE user_id = $1 AND date = $2',
+        [userId, previousDate]
+      )
+
+      const previousSleepData: ApiShemas['SleepData'] =
+        previousResult.rows.length > 0 && previousResult.rows[0].sleep_data
+          ? previousResult.rows[0].sleep_data
+          : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+
+      const durationMin = calculateSleepDuration(
+        previousSleepData.bedtime ?? null,
+        sleepData.wakeTime ?? null,
+        sleepData.napDurationMin ?? 0
+      )
+
+      const updatedSleepData: ApiShemas['SleepData'] = {
+        ...sleepData,
+        durationMin,
+      }
+
       const result = await client.query(
         `UPDATE daily_entries
-         SET habits = $1::jsonb, updated_at = NOW()
-         WHERE user_id = $2 AND date = $3
+         SET habits = $1::jsonb, sleep_data = $2::jsonb, updated_at = NOW()
+         WHERE user_id = $3 AND date = $4
          RETURNING id, date, sleep_data, habits`,
-        [JSON.stringify(habits), userId, date]
+        [JSON.stringify(habits), JSON.stringify(updatedSleepData), userId, date]
       )
 
       const row = result.rows[0]
+      const finalSleepData: ApiShemas['SleepData'] = row.sleep_data || updatedSleepData
+
+      const finalPreviousResult = await client.query(
+        'SELECT sleep_data FROM daily_entries WHERE user_id = $1 AND date = $2',
+        [userId, previousDate]
+      )
+
+      const finalPreviousSleepData: ApiShemas['SleepData'] =
+        finalPreviousResult.rows.length > 0 && finalPreviousResult.rows[0].sleep_data
+          ? finalPreviousResult.rows[0].sleep_data
+          : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+
+      const recalculatedDurationMin = calculateSleepDuration(
+        finalPreviousSleepData.bedtime ?? null,
+        finalSleepData.wakeTime ?? null,
+        finalSleepData.napDurationMin ?? 0
+      )
+
       return {
         id: row.date,
         date: row.date,
-        sleep: row.sleep_data,
+        sleep: {
+          ...finalSleepData,
+          durationMin: recalculatedDurationMin,
+        },
         habits: row.habits,
       }
     } finally {
@@ -253,23 +516,36 @@ export class SleepRecordsService {
 
     try {
       const yesterday = getYesterdayMoscow()
+      const dayBeforeYesterday = getPreviousDate(yesterday)
 
-      const result = await client.query(
+      const yesterdayResult = await client.query(
         'SELECT sleep_data FROM daily_entries WHERE user_id = $1 AND date = $2',
         [userId, yesterday]
       )
 
-      if (result.rows.length === 0) {
+      if (yesterdayResult.rows.length === 0) {
         return false
       }
 
-      const sleepData: ApiShemas['SleepData'] = result.rows[0].sleep_data
+      const yesterdaySleepData: ApiShemas['SleepData'] =
+        yesterdayResult.rows[0].sleep_data
+
+      const dayBeforeYesterdayResult = await client.query(
+        'SELECT sleep_data FROM daily_entries WHERE user_id = $1 AND date = $2',
+        [userId, dayBeforeYesterday]
+      )
+
+      const dayBeforeYesterdaySleepData: ApiShemas['SleepData'] =
+        dayBeforeYesterdayResult.rows.length > 0 &&
+        dayBeforeYesterdayResult.rows[0].sleep_data
+          ? dayBeforeYesterdayResult.rows[0].sleep_data
+          : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
 
       return (
-        sleepData.bedtime !== null &&
-        sleepData.wakeTime !== null &&
-        sleepData.bedtime !== undefined &&
-        sleepData.wakeTime !== undefined
+        dayBeforeYesterdaySleepData.bedtime !== null &&
+        dayBeforeYesterdaySleepData.bedtime !== undefined &&
+        yesterdaySleepData.wakeTime !== null &&
+        yesterdaySleepData.wakeTime !== undefined
       )
     } finally {
       client.release()
