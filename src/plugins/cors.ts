@@ -3,7 +3,7 @@ import cors, { FastifyCorsOptions } from '@fastify/cors'
 
 const allowedOrigins = new Set<string>([
   'http://localhost:5173',
-  'https://sadhana-tracker.netlify.app',
+  'https://app.sadhana-tracker.com',
 ])
 
 export default fp<FastifyCorsOptions>(async (fastify) => {

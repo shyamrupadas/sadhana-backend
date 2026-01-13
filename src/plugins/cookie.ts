@@ -4,7 +4,6 @@ import fastifyCookie from '@fastify/cookie'
 
 const cookiePlugin: FastifyPluginAsync = async (fastify) => {
   await fastify.register(fastifyCookie, {
-    secret: process.env.COOKIE_SECRET || 'my-secret',
     parseOptions: {},
   })
 }

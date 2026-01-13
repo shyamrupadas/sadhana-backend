@@ -27,10 +27,6 @@ const schema = {
       type: 'string',
       default: '7d',
     },
-    COOKIE_SECRET: {
-      type: 'string',
-      default: 'my-secret',
-    },
     CORS_ORIGIN: {
       type: 'string',
       default: 'http://localhost:5173',
