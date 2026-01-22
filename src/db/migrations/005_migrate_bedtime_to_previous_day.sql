@@ -136,4 +136,3 @@ BEGIN
     WHERE id = rec.id;
   END LOOP;
 END $$;
-

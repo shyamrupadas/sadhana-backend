@@ -37,17 +37,17 @@ export function getPreviousDate(date: string): string {
 export function calculateSleepDuration(
   bedtime: string | null,
   wakeTime: string | null,
-  napDurationMin: number
-): number {
+  napDuration: number | null
+): number | null {
   if (!bedtime || !wakeTime) {
-    return Math.max(0, Math.min(1440, napDurationMin))
+    return null
   }
 
   const bed = dayjs(bedtime)
   const wake = dayjs(wakeTime)
 
   if (!bed.isValid() || !wake.isValid()) {
-    return Math.max(0, Math.min(1440, napDurationMin))
+    return null
   }
 
   let diff = wake.diff(bed, 'minute')
@@ -56,7 +56,8 @@ export function calculateSleepDuration(
     diff = diff + 24 * 60
   }
 
-  let totalDuration = napDurationMin + diff
+  const napMinutes = napDuration ?? 0
+  let totalDuration = napMinutes + diff
 
   if (totalDuration > 24 * 60) {
     totalDuration = totalDuration - 24 * 60

@@ -57,7 +57,8 @@ export class SleepStatsService {
         (recordDate.isBefore(endDate) || recordDate.isSame(endDate, 'day')) &&
         record.sleep.bedtime !== null &&
         record.sleep.wakeTime !== null &&
-        record.sleep.durationMin > 0
+        record.sleep.duration !== null &&
+        record.sleep.duration > 0
       )
     })
 
@@ -75,7 +76,7 @@ export class SleepStatsService {
     const wakeTimes = filteredRecords
       .map((r) => r.sleep.wakeTime!)
       .map((wt) => formatTime(wt))
-    const durations = filteredRecords.map((r) => r.sleep.durationMin)
+    const durations = filteredRecords.map((r) => r.sleep.duration!)
 
     return {
       bedtime: calculateAverageTime(bedtimes),

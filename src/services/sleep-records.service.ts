@@ -42,19 +42,19 @@ export class SleepRecordsService {
         const previousSleepData: ApiShemas['SleepData'] =
           previousResult.rows.length > 0 && previousResult.rows[0].sleep_data
             ? previousResult.rows[0].sleep_data
-            : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+            : { bedtime: null, wakeTime: null, napDuration: null, duration: null }
 
         const currentSleepData: ApiShemas['SleepData'] = row.sleep_data || {
           bedtime: null,
           wakeTime: null,
-          napDurationMin: 0,
-          durationMin: 0,
+          napDuration: null,
+          duration: null,
         }
 
-        const durationMin = calculateSleepDuration(
+        const duration = calculateSleepDuration(
           previousSleepData.bedtime ?? null,
           currentSleepData.wakeTime ?? null,
-          currentSleepData.napDurationMin ?? 0
+          currentSleepData.napDuration ?? 0
         )
 
         entries.push({
@@ -62,7 +62,7 @@ export class SleepRecordsService {
           date: row.date,
           sleep: {
             ...currentSleepData,
-            durationMin,
+            duration,
           },
           habits: row.habits,
         })
@@ -95,19 +95,19 @@ export class SleepRecordsService {
         const previousSleepData: ApiShemas['SleepData'] =
           previousResult.rows.length > 0 && previousResult.rows[0].sleep_data
             ? previousResult.rows[0].sleep_data
-            : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+            : { bedtime: null, wakeTime: null, napDuration: null, duration: null }
 
         const currentSleepData: ApiShemas['SleepData'] = row.sleep_data || {
           bedtime: null,
           wakeTime: null,
-          napDurationMin: 0,
-          durationMin: 0,
+          napDuration: null,
+          duration: null,
         }
 
-        const durationMin = calculateSleepDuration(
+        const duration = calculateSleepDuration(
           previousSleepData.bedtime ?? null,
           currentSleepData.wakeTime ?? null,
-          currentSleepData.napDurationMin ?? 0
+          currentSleepData.napDuration ?? 0
         )
 
         entries.push({
@@ -115,7 +115,7 @@ export class SleepRecordsService {
           date: row.date,
           sleep: {
             ...currentSleepData,
-            durationMin,
+            duration,
           },
           habits: row.habits,
         })
@@ -152,20 +152,20 @@ export class SleepRecordsService {
       const previousSleepData: ApiShemas['SleepData'] =
         previousResult.rows.length > 0 && previousResult.rows[0].sleep_data
           ? previousResult.rows[0].sleep_data
-          : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+          : { bedtime: null, wakeTime: null, napDuration: null, duration: null }
 
       const row = result.rows[0]
       const currentSleepData: ApiShemas['SleepData'] = row.sleep_data || {
         bedtime: null,
         wakeTime: null,
-        napDurationMin: 0,
-        durationMin: 0,
+        napDuration: null,
+        duration: null,
       }
 
-      const durationMin = calculateSleepDuration(
+      const duration = calculateSleepDuration(
         previousSleepData.bedtime ?? null,
         currentSleepData.wakeTime ?? null,
-        currentSleepData.napDurationMin ?? 0
+        currentSleepData.napDuration ?? 0
       )
 
       return {
@@ -173,7 +173,7 @@ export class SleepRecordsService {
         date: row.date,
         sleep: {
           ...currentSleepData,
-          durationMin,
+          duration,
         },
         habits: row.habits,
       }
@@ -206,19 +206,19 @@ export class SleepRecordsService {
         const nextSleepData: ApiShemas['SleepData'] = nextRecord.rows[0].sleep_data || {
           bedtime: null,
           wakeTime: null,
-          napDurationMin: 0,
-          durationMin: 0,
+          napDuration: null,
+          duration: null,
         }
 
-        const nextDurationMin = calculateSleepDuration(
+        const nextDuration = calculateSleepDuration(
           sleepData.bedtime,
           nextSleepData.wakeTime ?? null,
-          nextSleepData.napDurationMin ?? 0
+          nextSleepData.napDuration ?? 0
         )
 
         const updatedNextSleepData: ApiShemas['SleepData'] = {
           ...nextSleepData,
-          durationMin: nextDurationMin,
+          duration: nextDuration,
         }
 
         await client.query(
@@ -243,19 +243,19 @@ export class SleepRecordsService {
       const previousSleepData: ApiShemas['SleepData'] =
         previousRecord.rows.length > 0 && previousRecord.rows[0].sleep_data
           ? previousRecord.rows[0].sleep_data
-          : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+          : { bedtime: null, wakeTime: null, napDuration: null, duration: null }
 
-      const durationMin = calculateSleepDuration(
+      const duration = calculateSleepDuration(
         previousSleepData.bedtime ?? null,
         sleepData.wakeTime ?? null,
-        sleepData.napDurationMin ?? 0
+        sleepData.napDuration ?? 0
       )
 
       const sleepDataComplete: ApiShemas['SleepData'] = {
         bedtime: sleepData.bedtime ?? null,
         wakeTime: sleepData.wakeTime ?? null,
-        napDurationMin: sleepData.napDurationMin ?? 0,
-        durationMin,
+        napDuration: sleepData.napDuration ?? null,
+        duration,
       }
 
       const habits =
@@ -286,12 +286,12 @@ export class SleepRecordsService {
       const finalPreviousSleepData: ApiShemas['SleepData'] =
         finalPreviousRecord.rows.length > 0 && finalPreviousRecord.rows[0].sleep_data
           ? finalPreviousRecord.rows[0].sleep_data
-          : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+          : { bedtime: null, wakeTime: null, napDuration: null, duration: null }
 
-      const recalculatedDurationMin = calculateSleepDuration(
+      const recalculatedDuration = calculateSleepDuration(
         finalPreviousSleepData.bedtime ?? null,
         finalSleepData.wakeTime ?? null,
-        finalSleepData.napDurationMin ?? 0
+        finalSleepData.napDuration ?? 0
       )
 
       return {
@@ -299,7 +299,7 @@ export class SleepRecordsService {
         date: row.date,
         sleep: {
           ...finalSleepData,
-          durationMin: recalculatedDurationMin,
+          duration: recalculatedDuration,
         },
         habits: row.habits,
       }
@@ -332,8 +332,8 @@ export class SleepRecordsService {
         sleepData = {
           bedtime: null,
           wakeTime: null,
-          napDurationMin: 0,
-          durationMin: 0,
+          napDuration: null,
+          duration: null,
         }
         habits = []
       } else {
@@ -341,8 +341,8 @@ export class SleepRecordsService {
         sleepData = row.sleep_data || {
           bedtime: null,
           wakeTime: null,
-          napDurationMin: 0,
-          durationMin: 0,
+          napDuration: null,
+          duration: null,
         }
         habits = Array.isArray(row.habits) ? row.habits : []
       }
@@ -364,17 +364,17 @@ export class SleepRecordsService {
       const previousSleepData: ApiShemas['SleepData'] =
         previousResult.rows.length > 0 && previousResult.rows[0].sleep_data
           ? previousResult.rows[0].sleep_data
-          : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+          : { bedtime: null, wakeTime: null, napDuration: null, duration: null }
 
-      const durationMin = calculateSleepDuration(
+      const duration = calculateSleepDuration(
         previousSleepData.bedtime ?? null,
         sleepData.wakeTime ?? null,
-        sleepData.napDurationMin ?? 0
+        sleepData.napDuration ?? 0
       )
 
       const updatedSleepData: ApiShemas['SleepData'] = {
         ...sleepData,
-        durationMin,
+        duration,
       }
 
       const entryId = `${userId}-${date}`
@@ -398,12 +398,12 @@ export class SleepRecordsService {
       const finalPreviousSleepData: ApiShemas['SleepData'] =
         finalPreviousResult.rows.length > 0 && finalPreviousResult.rows[0].sleep_data
           ? finalPreviousResult.rows[0].sleep_data
-          : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+          : { bedtime: null, wakeTime: null, napDuration: null, duration: null }
 
-      const recalculatedDurationMin = calculateSleepDuration(
+      const recalculatedDuration = calculateSleepDuration(
         finalPreviousSleepData.bedtime ?? null,
         finalSleepData.wakeTime ?? null,
-        finalSleepData.napDurationMin ?? 0
+        finalSleepData.napDuration ?? 0
       )
 
       return {
@@ -411,7 +411,7 @@ export class SleepRecordsService {
         date: row.date,
         sleep: {
           ...finalSleepData,
-          durationMin: recalculatedDurationMin,
+          duration: recalculatedDuration,
         },
         habits: row.habits,
       }
@@ -444,8 +444,8 @@ export class SleepRecordsService {
       const sleepData: ApiShemas['SleepData'] = existing.rows[0].sleep_data || {
         bedtime: null,
         wakeTime: null,
-        napDurationMin: 0,
-        durationMin: 0,
+        napDuration: null,
+        duration: null,
       }
 
       const previousDate = getPreviousDate(date)
@@ -457,17 +457,17 @@ export class SleepRecordsService {
       const previousSleepData: ApiShemas['SleepData'] =
         previousResult.rows.length > 0 && previousResult.rows[0].sleep_data
           ? previousResult.rows[0].sleep_data
-          : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+          : { bedtime: null, wakeTime: null, napDuration: null, duration: null }
 
-      const durationMin = calculateSleepDuration(
+      const duration = calculateSleepDuration(
         previousSleepData.bedtime ?? null,
         sleepData.wakeTime ?? null,
-        sleepData.napDurationMin ?? 0
+        sleepData.napDuration ?? 0
       )
 
       const updatedSleepData: ApiShemas['SleepData'] = {
         ...sleepData,
-        durationMin,
+        duration,
       }
 
       const result = await client.query(
@@ -489,12 +489,12 @@ export class SleepRecordsService {
       const finalPreviousSleepData: ApiShemas['SleepData'] =
         finalPreviousResult.rows.length > 0 && finalPreviousResult.rows[0].sleep_data
           ? finalPreviousResult.rows[0].sleep_data
-          : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+          : { bedtime: null, wakeTime: null, napDuration: null, duration: null }
 
-      const recalculatedDurationMin = calculateSleepDuration(
+      const recalculatedDuration = calculateSleepDuration(
         finalPreviousSleepData.bedtime ?? null,
         finalSleepData.wakeTime ?? null,
-        finalSleepData.napDurationMin ?? 0
+        finalSleepData.napDuration ?? 0
       )
 
       return {
@@ -502,7 +502,7 @@ export class SleepRecordsService {
         date: row.date,
         sleep: {
           ...finalSleepData,
-          durationMin: recalculatedDurationMin,
+          duration: recalculatedDuration,
         },
         habits: row.habits,
       }
@@ -539,7 +539,7 @@ export class SleepRecordsService {
         dayBeforeYesterdayResult.rows.length > 0 &&
         dayBeforeYesterdayResult.rows[0].sleep_data
           ? dayBeforeYesterdayResult.rows[0].sleep_data
-          : { bedtime: null, wakeTime: null, napDurationMin: 0, durationMin: 0 }
+          : { bedtime: null, wakeTime: null, napDuration: null, duration: null }
 
       return (
         dayBeforeYesterdaySleepData.bedtime !== null &&
