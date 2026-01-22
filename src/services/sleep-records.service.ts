@@ -17,6 +17,11 @@ dayjs.extend(timezone)
 export class SleepRecordsService {
   constructor(private fastify: FastifyInstance) {}
 
+  private normalizeNapDuration(napDuration: number | null | undefined): number | null {
+    if (napDuration === null || napDuration === undefined) return null
+    return napDuration <= 0 ? null : napDuration
+  }
+
   async getAllSleepRecords(userId: string): Promise<ApiShemas['DailyEntry'][]> {
     const client = await this.fastify.pg.connect()
 
@@ -245,16 +250,17 @@ export class SleepRecordsService {
           ? previousRecord.rows[0].sleep_data
           : { bedtime: null, wakeTime: null, napDuration: null, duration: null }
 
+      const normalizedNapDuration = this.normalizeNapDuration(sleepData.napDuration)
       const duration = calculateSleepDuration(
         previousSleepData.bedtime ?? null,
         sleepData.wakeTime ?? null,
-        sleepData.napDuration ?? 0
+        normalizedNapDuration
       )
 
       const sleepDataComplete: ApiShemas['SleepData'] = {
         bedtime: sleepData.bedtime ?? null,
         wakeTime: sleepData.wakeTime ?? null,
-        napDuration: sleepData.napDuration ?? null,
+        napDuration: normalizedNapDuration,
         duration,
       }
 
